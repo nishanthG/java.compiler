@@ -20,6 +20,7 @@ result = parser.parse(contents)
 
 visited = []
 n = 0
+suff = []
 for i in range(len(nodes)):
     current = nodes[i]
     if(type(current['right']) is list):
@@ -33,7 +34,8 @@ for i in range(len(nodes)):
                     current['right'].replace(current['right'], visited[k]['left'])
                     
 
-    temp = {'left' : current['left'] + str(i), 'right' : current['right']}
+    temp = {'left' : current['left'] + str(len(suff)), 'right' : current['right']}
+    suff.append(len(suff))
     visited.append(temp)
 
 code = ''
@@ -48,7 +50,7 @@ for i in range(n):
 
 code = code.replace('[','')
 code = code.replace(']','')
-
+#print(visited)
 f = open('ptree.dot',"w+")
 f.write('digraph G {\n' + code + '\n}')
 
