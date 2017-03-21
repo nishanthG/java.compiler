@@ -7,6 +7,7 @@ This README would normally document whatever steps are necessary to get your app
 * A small attempt to make a compiler, which compiles JAVA language. The compiler is implemented in PYTHON and uses MIPS as the base language.
 * It is done for a course CS335A - Compiler design under Prof. Amey Karkare, CSE dept., IITK.
 * The first commit is of lexer and parser, the second one is for semantic analysis. 
+
 ### Files Description ###
 **lexer.py**  : contains  the lexer part of the compiler, were token and keywords are defined. Lexical analysis is the first phase of a compiler. It takes the modified source code from language preprocessors that are written in the form of sentences. The lexical analyzer breaks these syntaxes into a series of tokens, by removing any whitespace or comments in the source code.
 
