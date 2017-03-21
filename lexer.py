@@ -49,8 +49,8 @@ reserved = {
 	#'finally' : 'FINALLY',
 	'static' : 'STATIC',
 	'abstract' : 'ABSTRACT',
-	#'true' : 'TRUE',
-	#'false' : 'FALSE',
+	'True' : 'TRUE',
+	'False' : 'FALSE',
 	'final' : 'FINAL',
 	'native' : 'NATIVE',
 	'transient' : 'TRANSIENT',
@@ -58,7 +58,8 @@ reserved = {
 	'strictfp' : 'STRICTFP',
 	'byte' : 'BYTE',
 	'enum' : 'ENUM',
-	'package' : 'PACKAGE'
+	'package' : 'PACKAGE',
+	'String' : 'STRING'
 
 }
 
@@ -66,7 +67,9 @@ reserved = {
 #Tokens
 tokens = [
 	'IDENTIFIER',
-	'NUMBER',
+	#'NUMBER',
+	'NUMINT',
+	'NUMFLOAT',
 	'LITERAL',
 	'PLUS',
 	'MINUS',
@@ -169,7 +172,7 @@ t_OR_ASSIGNMENT = r'\|\='
 #t_XOR_ASSIGNMENT = r'\^\='
 t_PLUS_PLUS = r'\+\+'
 t_MINUS_MINUS = r'\-\-'
-t_NUMBER = r'\d+(.\d+)?(E[+-]?\d+)?'
+#t_NUMBER = r'\d+(.\d+)?(E[+-]?\d+)?'
 #t_ELLIPSIS = r'\.\.\.'
 t_CURL_DASH = r'\~'
 #t_AT = r'\@'
@@ -183,6 +186,15 @@ def t_LITERAL(t):
     r"(?P<start>\"|')[^\"']*(?P=start)"
     t.value = t.value.replace("\"", "").replace("'s", "")
     return t
+def t_NUMFLOAT(t):
+	r'\d+.\d+'
+	t.value = float(t.value)    
+	return t
+def t_NUMINT(t):
+	r'\d+'
+	t.value = int(t.value)    
+	return t
+
 
 # Line numbers
 def t_newline(t):
