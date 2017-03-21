@@ -36,7 +36,7 @@ This README would normally document whatever steps are necessary to get your app
 
 * Prashant kumar(11525) and Nishanth Gunupudi(11289)
 
-# References # :  JAVA grammar from Java SE Specifications, Java Language Specification, Oracle.
+# References  :  JAVA grammar from Java SE Specifications, Java Language Specification, Oracle.
 
 ### Who do I talk to? ###
 
