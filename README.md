@@ -28,8 +28,8 @@ This README would normally document whatever steps are necessary to get your app
 
 ### How do I get set up? ###
 
-* 1. initially, cd to folder where the files are.
-  2. python semanticAnalysis.py 'file_name'
+* initially, cd to folder where the files are.
+* python semanticAnalysis.py 'file_name'
 * Symbol table details in symbolTable.text
 
 ### Contribution  ###
