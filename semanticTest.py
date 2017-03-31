@@ -4,7 +4,7 @@ import ply.lex as lex
 
 import semanticAnalysis
 import lexer
-from semanticAnalysis import symbolTable
+from semanticAnalysis import symbolTables
 
 
 
@@ -18,7 +18,9 @@ f.close()
 
 result = parser.parse(contents)
 data = ''
-for symbol in symbolTable.table:
-    data += str(symbol)  + '\n'
+for symbolTable in symbolTables:
+    for symbol in symbolTable.table:
+        data += str(symbol)  + '\n'
+    data += '\n'
 f = open('SymbolTable.text',"w+")
 f.write(data)

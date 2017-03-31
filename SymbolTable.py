@@ -1,30 +1,22 @@
 class SymbolTable:
-	def __init__(self):
+	def __init__(self, parent):
+		self.parent = parent
 		self.table = []
+
 	def insert(self, symbol):
 		self.table.append(symbol)
-	def lookup(self, name, scopes):
-		found = False
-		for i in range(len(scopes)-1, -1, -1):
-			for symbol in self.table:
-				if((symbol['Name'] == name) and (symbol['Scope'] == scopes[i])):
-					found = True
-					matchedSymbol = symbol
-					break
-			if(found):
-				break
-		if(found):
-			return matchedSymbol
-	def lookupCurrentScope(self, name, scope):
-		found = False
+		
+	def lookup(self, name):
+		if(self.lookupScope(name)):
+			return self.lookupScope(name)
+		elif(self.parent):
+			return self.parent.lookupScope(name)
+
+	def lookupScope(self, name):
 		for symbol in self.table:
-			if((symbol['Name'] == name) and (symbol['Scope'] == scope)):
-				found = True
-				matchedSymbol = symbol
-				break
-		if(found):
-			return matchedSymbol
-			
+			if(symbol['Name'] == name):
+				return symbol
+
 
 		
 
