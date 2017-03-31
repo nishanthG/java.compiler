@@ -7,9 +7,6 @@ from SymbolTable import SymbolTable
 symbolTables = []
 symbolTable = SymbolTable(None)
 symbolTables.append(symbolTable)
-scope = 0
-noScope = 0
-scopes = [0]
 operatorStack = Stack()
 operandStack = Stack()
 priority = {  '+': 1,
@@ -80,7 +77,7 @@ def p_NormalClassDeclaration(p):
   if(symbolTable.lookup(p[1])):
     errorReport('Error at' + str(p.lineno(2)) + ' "' + p[2] + '" ' + ' is already defined')
   else:
-    symbolTable.insert({'Name':p[2], 'Type':p[1], 'Scope':scope})    
+    symbolTable.insert({'Name':p[2], 'Type':p[1]})    
 
 
 def p_SquareBraceList(p):
@@ -163,7 +160,7 @@ def p_MemberDecl(p):
     if(symbolTable.lookupScope(p[2])):
       errorReport('Error at' + str(p.lineno(2)) + ' "' + p[2] + '" ' + ' is already defined')
     else:
-      symbolTable.insert({'Name':p[2], 'Type':p[1],'Scope':scope})  
+      symbolTable.insert({'Name':p[2], 'Type':p[1]})  
   
 def p_MethodOrFieldDecl(p):
   '''MethodOrFieldDecl : Type IDENTIFIER MethodOrFieldRest'''
@@ -173,11 +170,11 @@ def p_MethodOrFieldDecl(p):
     else:
       if(type(p[3][1]) is dict):
         if(p[3][1]['Type'] == p[1]):
-          symbolTable.insert({'Name':p[2], 'Type':p[1], 'value':p[3][1]['Value'], 'Scope':scope})
+          symbolTable.insert({'Name':p[2], 'Type':p[1], 'value':p[3][1]['Value']})
         else:
           errorReport(message='Error at line no ' + str(p.lineno(2)) + ', Type Mismatch: expected "' + p[1] + '"' + ' but found "' + p[3][1]['Type'] + '"')
       else:
-        symbolTable.insert({'Name':p[2], 'Type':p[1], 'value': 0, 'Scope':scope})
+        symbolTable.insert({'Name':p[2], 'Type':p[1], 'value': 0})
       
     for i in range(2, len(p[3])):
       if(type(p[3][i]) is dict):
@@ -185,19 +182,19 @@ def p_MethodOrFieldDecl(p):
           errorReport('Error at line no ' + str(p.lineno(2)) + ', '+ '"' + p[3][i]['Name'] + '"' + ' is already defined')       
         else:
           if(p[3][i]['Type'] == p[1]):
-            symbolTable.insert({'Name':p[3][i]['Name'], 'Type':p[1], 'Value':p[3][i]['Value'], 'Scope':scope})
+            symbolTable.insert({'Name':p[3][i]['Name'], 'Type':p[1], 'Value':p[3][i]['Value']})
           else:
             errorReport(message='Error at line no ' + str(p.lineno(2)) + ', '+ ' Type Mismatch: expected "' + p[1] + '"' + ' but found "' + p[3][i]['Type'] + '"')
       else:
         if(symbolTable.lookupScope(p[3][i])):
           errorReport('Error at line no ' + str(p.lineno(2)) + ', ' + '"' + p[3][i] + '"' + ' is already defined')
         else:
-          symbolTable.insert({'Name':p[3][i], 'Type':p[1], 'Value':0, 'Scope':scope})
+          symbolTable.insert({'Name':p[3][i], 'Type':p[1], 'Value':0})
   else:
     if(symbolTable.lookupScope(p[2])):
       errorReport('Error at line no ' + str(p.lineno(2)) + ', '+ '"' + p[2] + '"' + ' is already defined')
     else:
-      symbolTable.insert({'Name':p[2], 'Type': 'Method', 'ReturnType':p[1], 'Scope':scope})
+      symbolTable.insert({'Name':p[2], 'Type': 'Method', 'ReturnType':p[1]})
   
 def p_MethodOrFieldRest(p):
   '''MethodOrFieldRest : FieldDeclaratorsRest SEMICOLON
@@ -347,14 +344,14 @@ def p_LocalVariableDeclarationStatement(p):
           errorReport('Error: ' + '"' + p[2][i]['Name'] + '"' + ' is already defined')
         else:
           if(p[2][i]['Type'] == p[1]):
-            symbolTable.insert({'Name':p[2][i]['Name'], 'Type':p[1], 'Value':p[2][i]['Value'], 'Scope':scope})
+            symbolTable.insert({'Name':p[2][i]['Name'], 'Type':p[1], 'Value':p[2][i]['Value']})
           else:
             errorReport(message= 'Error at line no ' + str(p.lineno(3))+ 'Type Mismatch: expected "' + p[1]['Type'] + '"' + ' but found "' + p[2]['Type'] + '"')
       else:
         if(symbolTable.lookupScope(p[2][i])):
           errorReport('Error at line no ' + str(p.lineno(3)) + ', ' + '"' + p[2][i] + '"' + ' is already defined')
         else:
-          symbolTable.insert({'Name':p[2][i], 'Type':p[1], 'Value':0, 'Scope':scope})
+          symbolTable.insert({'Name':p[2][i], 'Type':p[1], 'Value':0})
   else:
     for i in range(0, len(p[3])):
       if(type(p[3][i]) is dict):
@@ -362,14 +359,14 @@ def p_LocalVariableDeclarationStatement(p):
           errorReport('Error: ' + '"' + p[3][i]['Name'] + '"' + ' is already defined')
         else:
           if(p[3][i]['Type'] == p[2]):
-            symbolTable.insert({'Name':p[3][i]['Name'], 'Type':p[2], 'VariableModifier': p[1], 'Value':p[3][i]['Value'], 'Scope':scope})
+            symbolTable.insert({'Name':p[3][i]['Name'], 'Type':p[2], 'VariableModifier': p[1], 'Value':p[3][i]['Value']})
           else:
             errorReport(message='Error at line no ' + str(p.lineno(3)) + ', '+ 'Type Mismatch: expected "' + p[2]['Type'] + '"' + ' but found "' + p[3]['Type'] + '"')
       else:
         if(symbolTable.lookupScope(p[3][i], scope)):
           errorReport('Error at line no ' + str(p.lineno(3)) + ', '+ '"' + p[3][i] + '"' + ' is already defined')
         else:
-          symbolTable.insert({'Name':p[3][i], 'Type':p[2], 'VariableModifier': p[1], 'Value':0, 'Scope':scope})
+          symbolTable.insert({'Name':p[3][i], 'Type':p[2], 'VariableModifier': p[1], 'Value':0})
 
   
 def p_Statement(p):
@@ -436,7 +433,7 @@ def p_ForVarControl(p):
       errorReport('Error at line no ' + str(p.lineno(2)) +', '+ '"' + p[2] + '"' + ' is already defined')
     else:
       if(p[1] == p[3][0]['Type']):
-        symbolTable.insert({'Name':p[2], 'Type':p[1], 'Value':p[3][0]['Value'], 'Scope':scope})
+        symbolTable.insert({'Name':p[2], 'Type':p[1], 'Value':p[3][0]['Value']})
       else:
         errorMessage(message='Error at line no ' + str(p.lineno(2)) +', '+ 'Type Mismatch: expected "' + p[1]['Type'] + '"' + ' but found "' + p[2]['Type'] + '"')
     for i in range(1, len(p[3])):
@@ -444,7 +441,7 @@ def p_ForVarControl(p):
         errorReport('Error at line no ' + str(p.lineno(2)) +', '+ '"' + p[3][i]['Name'] + '"' + ' is already defined')
       else:
         if(p[1] == p[3][i]['Type']):
-          symbolTable.insert({'Name':p[3][i]['Name'], 'Type':p[1], 'Value':p[3][i]['Value'], 'Scope':scope}) 
+          symbolTable.insert({'Name':p[3][i]['Name'], 'Type':p[1], 'Value':p[3][i]['Value']}) 
         else:
           errorMessage('Error at line no ' + str(p.lineno(2))+', '+ 'Type Mismatch: expected "' + p[1]['Type'] + '"' + ' but found "' + p[3]['Type'] + '"')
   else:
@@ -452,7 +449,7 @@ def p_ForVarControl(p):
       errorReport('Error at line no ' + str(p.lineno(3)) + ', '+ '"' + p[3] + '"' + ' is already defined')
     else:
       if(p[2] == p[4][0]['Type']):
-        symbolTable.insert({'Name':p[3], 'Type':p[2], 'Value':p[4][0]['Value'], 'Scope':scope})
+        symbolTable.insert({'Name':p[3], 'Type':p[2], 'Value':p[4][0]['Value']})
       else:
         errorMessage(message='Error at line no ' + str(p.lineno(3)) + ', Type Mismatch: expected "' + p[2]['Type'] + '"' + ' but found "' + p[3]['Type'] + '"')
     for i in range(1, len(p[4])):
@@ -460,7 +457,7 @@ def p_ForVarControl(p):
         errorReport('Error: ' + '"' + p[4][i]['Name'] + '"' + ' is already defined')  
       else:
         if(p[2] == p[4][i]['Type']):
-          symbolTable.insert({'Name':p[4][i]['Name'], 'Type':p[2], 'Value':p[4][i]['Value'], 'Scope':scope})
+          symbolTable.insert({'Name':p[4][i]['Name'], 'Type':p[2], 'Value':p[4][i]['Value']})
         else:
           errorMessage(message='Error at line no ' + str(p.lineno(3)) + ', Type Mismatch: expected "' + p[2]['Type'] + '"' + ' but found "' + p[4]['Type'] + '"')
 
