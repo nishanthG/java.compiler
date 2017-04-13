@@ -10,7 +10,7 @@ class SymbolTable:
 		if(self.lookupScope(name)):
 			return self.lookupScope(name)
 		elif(self.parent):
-			return self.parent.lookupScope(name)
+			return self.parent.lookup(name)
 
 	def lookupScope(self, name):
 		for symbol in self.table:
