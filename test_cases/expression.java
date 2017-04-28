@@ -1,23 +1,27 @@
-public class ClassA {
-	int a = 5;
-	{
-		int b;
-		a = b + 1;
-		{
-			a = b + 1;
-		}
-	}
-	int c;
-	
-	public static int main(String[] args, int arg) {
-      int i = 0;
-      int j;
-      i = arg + 2;
-      boolean bool = True;
-      while(bool){
-      	i = c + 1;
-      }
-   }
+public class expression {
 
+	public static void main(String[] args, int arg) {
+      int i = 1, c;
+      int b = 1;
+      b = c + i*3+b;
+      c = 1;
+      boolean bool = True;
+      if(i <= b){
+      	b = c + b;
+      }
+      else{
+      	b = b + 5;
+      }
+
+      while(bool){
+      	b = b + 6;
+      }
+      do{
+      	b = b + 8;
+      }while(bool);
+      for(i = 0; i < 6; i++){
+      	b = b + 1;
+      }      	
+   }
 	
 }

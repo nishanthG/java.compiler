@@ -27,5 +27,6 @@ f = open('SymbolTable.csv',"w+")
 f.write(data)
 f = open("Ast.text", "w+")
 f.write(str(ast[1]))
+#print ast
 ast[1].getTac()
 f.close

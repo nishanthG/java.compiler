@@ -59,10 +59,10 @@ class VariableDeclaration:
 		if(self._next):
 			self._next.getTac()
 			if(self._varValue):
-				tac.gen(str(self._varName) + " = " + str(self._varValue.getTac()))
+				tac.gen(str(self._varName) + " = " + str(self._varValue.getTac()) + '\n')
 		else:
 			if(self._varValue):
-				tac.gen(str(self._varName) + " = " + str(self._varValue.getTac()))
+				tac.gen(str(self._varName) + " = " + str(self._varValue.getTac()) + '\n')
 
 
 class MethodDeclaration:
@@ -98,6 +98,16 @@ class Parameters:
 		return self._parName
 	def getNextPar(self):
 		return self._next
+
+class MethodCall:
+	def __init__(self, methodName, arguments):
+		self._methodName = methodName
+		self._arguments = arguments
+
+class Arguments:
+	def __init__(self, argument, next):
+		self._argument = argument
+		self._next = next
 
 class Block:
 	def __init__(self, statements):
@@ -136,6 +146,13 @@ class IfStatement:
 		self._statement = statement
 	def __repr__(self):
 		return "if(" + str(self._expression) + ")" + str(self._statement)
+	def getTac(self):
+		ltrue = tac.newLabel()
+		lfalse = tac.newLabel()
+		tac.gen('if ' + self._expression.getTac() + ' goto ' + ltrue + "\ngoto " + lfalse + '\n')
+		tac.gen(ltrue + ":\n")
+		self._statement.getTac()
+		tac.gen(lfalse +":\n")
 
 class IfElseStatement:
 	def __init__(self, expression, ifStatement, elseStatement):
@@ -144,6 +161,14 @@ class IfElseStatement:
 		self._elseStatement = elseStatement
 	def __repr__(self):
 		return "if(" + str(self._expression) + ")" + str(self._ifStatement) + " else" + str(self._elseStatement)
+	def getTac(self):
+		ltrue = tac.newLabel()
+		lfalse = tac.newLabel()
+		tac.gen('if ' + self._expression.getTac() + ' goto ' + ltrue + "\ngoto " + lfalse + '\n')
+		tac.gen(ltrue + ":\n")
+		self._ifStatement.getTac()
+		tac.gen(lfalse +":\n")
+		self._elseStatement.getTac()
 
 class WhileLoopStatement:
 	def __init__(self, expression, statement):
@@ -151,20 +176,41 @@ class WhileLoopStatement:
 		self._statement = statement
 	def __repr__(self):
 		return "while(" + str(self._expression) + ")" + str(self._statement)
+	def getTac(self):
+		ltrue = tac.newLabel()
+		lafter = tac.newLabel()
+		lbegin = tac.newLabel()
+		tac.gen(lbegin + ":\n")
+		tac.gen('if ' + self._expression.getTac() + ' goto ' + ltrue + "\ngoto " + lafter + '\n')
+		tac.gen(ltrue + ":\n")
+		self._statement.getTac()
+		tac.gen('goto ' + lbegin +'\n'+ lafter +":\n")
 
 class DoWhileLoopStatement:
 	def __init__(self, statement, expression):
 		self._statement = statement
 		self._expression = expression
 
+
 	def __repr__(self):
 		return  "do " + str(self._statement) + "while(" + str(self._expression) + ")"
+	def getTac(self):
+		ltrue = tac.newLabel()
+		lafter = tac.newLabel()
+		lbegin = tac.newLabel()
+		tac.gen(lbegin +":\n")
+		self._statement.getTac()
+		tac.gen('if ' + self._expression.getTac() + ' goto ' + lbegin + "\ngoto " + lafter + '\n')
+		tac.gen(lafter + ":\n")
+		
 
 class ReturnStatement:
 	def __init__(self, expression):
 		self._expression = expression
 	def __repr(self):
 		return "return " + str(self._expression)
+	def getTac(self):
+		tac.gen('return' + self._expression)
 
 class SwitchStatement:
 	def __init__(self, expression, switchBlockStatementGroup):
@@ -172,7 +218,10 @@ class SwitchStatement:
 		self._switchBlockStatementGroup = switchBlockStatementGroup
 	def __repr__(self):
 		return "switch(" + str(self._expression) + "){" + str(self._switchBlockStatementGroup) + "}"
-
+	def getTac(self):
+		pass
+		#t = tac.newTemp()
+		#t = expression.getTac()
 
 class SwitchBlockStatementGroup:
 	def __init__(self, switchLabel, statement, next):
@@ -192,6 +241,19 @@ class ForLoopStatement:
 	def __repr__(self):
 		return "for(" + str(self._forControl) + ")" + str(self._statement)
 
+	def getTac(self):
+		ltrue = tac.newLabel()
+		lafter = tac.newLabel()
+		lbegin = tac.newLabel()
+		t = tac.newTemp()
+		self._forControl._forInit.getTac()
+		tac.gen(lbegin + ":\n")
+		tac.gen('if ' + self._forControl._forCondition.getTac() + ' goto ' + ltrue + "\ngoto " + lafter + '\n')
+		tac.gen(ltrue + ":\n")
+		self._statement.getTac()
+		self._forControl._forUpdate.getTac()
+		tac.gen('goto ' + lbegin +'\n'+ lafter +":\n")
+
 class ForControl:
 	def __init__(self, forInit, forCondition, forUpdate):
 		self._forInit = forInit
@@ -202,6 +264,9 @@ class ForControl:
 
 	def setForInit(self, forInit):
 		self._forInit = forInit
+
+
+
 
 class ForControlColon:
 	def __init__(self, forInit, expression):
@@ -219,6 +284,12 @@ class ForUpdate:
 			return str(self._statement) + ", " + str(self._next)
 		else:
 			return str(self._statement)
+	def getTac(self):
+		if(self._next):
+			self._statement.getTac()
+			self._next.getTac()
+		else:
+			self._statement.getTac()
 
 class AssignmentExpression:
 	def __init__(self, rhs, operator, lhs):
@@ -228,7 +299,7 @@ class AssignmentExpression:
 	def __str__(self):
 		return str(self._lhs) + self._operator + str(self._rhs)
 	def getTac(self):
-		tac.gen(str(self._lhs.getTac()) + " = " + self._rhs.getTac())
+		tac.gen(str(self._lhs.getTac()) + " = " + str(self._rhs.getTac()) + '\n')
 
 class BinaryExpression:
 	def __init__(self, rhs, operator, lhs):
@@ -239,7 +310,7 @@ class BinaryExpression:
 		return str(self._lhs) + self._operator + str(self._rhs)
 	def getTac(self):
 		temp = tac.newTemp()
-		tac.gen(temp + " = " + str(self._lhs.getTac()) + self._operator + str(self._rhs.getTac()))
+		tac.gen(temp + " = " + str(self._lhs.getTac()) + self._operator + str(self._rhs.getTac()) + '\n')
 		return temp
 
 class UnaryExpression:
@@ -250,7 +321,14 @@ class UnaryExpression:
 		return self._sign[0] + str(self._operand)
 	def getTac(self):
 		temp = tac.newTemp()
-		tac.gen(temp + " = " + str(self._sign[0]) + " " + self._operand.getTac())
+		if(self._sign[0]=='++'):
+			tac.gen(temp + " = " + str(self._operand.getTac() + " + 1\n"))
+		elif(self._sign[0]=='--'):
+			tac.gen(temp + " = " + str(self._operand.getTac() + ' - 1\n'))
+		elif(self._sign[0]=='+'):
+			tac.gen(temp + " = " + str(self._operand.getTac() + '\n'))
+		else:
+			tac.gen(temp + " = "+ str(self._sign[0]) + str(self._operand.getTac() + '\n'))
 		return temp
 
 class ConditionalExpression:

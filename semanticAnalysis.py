@@ -810,9 +810,14 @@ def p_ParExpression(p):
 def p_ExpressionList(p):
   '''ExpressionList : Expression
                     | Expression COMMA ExpressionList   '''
+  if(len(p)==2):
+    p[0] = Arguments(p[1], None)
+  else:
+    p[0] = Arguments(p[1], p[3])
   
 def p_Arguments(p):
   '''Arguments :  L_BRACE ExpressionList L_BRACE '''
+  p[0] = p[2]
   
 def p_SuperSuffix(p):
   '''SuperSuffix : Arguments 

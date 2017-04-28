@@ -6,7 +6,7 @@ class ThreeAddressCode:
 		self._file.close
 	def gen(self, code):
 		self._file = open('3ac.text',"a")
-		self._file.write(code+'\n')
+		self._file.write(code)
 	def newTemp(self):
 		self._temp_no += 1
 		return 't'+str(self._temp_no)
