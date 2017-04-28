@@ -21,9 +21,11 @@ data = 'Name        Type        Value \n\n'
 for symbolTable in symbolTables:
     for symbol in symbolTable.table:
         data += symbol['Name'] + "      " + symbol['Type'] + "      "+ str(symbol['Value'])  + '\n'
+        #data += str(symbol)
     data += '\n'
-f = open('SymbolTable.text',"w+")
+f = open('SymbolTable.csv',"w+")
 f.write(data)
 f = open("Ast.text", "w+")
 f.write(str(ast[1]))
+ast[1].getTac()
 f.close

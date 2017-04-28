@@ -25,7 +25,8 @@ priority = {  '+': 1,
               '|': 6,
               '&': 7 }
 arithOp = ['+', '-', '*', '/']
-compOp = ['<', '>', '<=', '>=', '==', '!=', '&', '|']
+compOp = ['<', '>', '<=', '>=', '==', '!=']
+logicalOp = ['|', '&']
 
 def p_CompilationUnit(p):
   '''CompilationUnit : PACKAGE QualifiedIdentifier SEMICOLON ImportDeclarationList TypeDeclarationList 
@@ -95,7 +96,7 @@ def p_NormalClassDeclaration(p):
 def p_SquareBraceList(p):
   '''SquareBraceList : 
                   | L_SQUARE_BRACE R_SQUARE_BRACE SquareBraceList
-                  | L_SQUARE_BRACE NUMINT R_SQUARE_BRACE SquareBraceList'''
+                  | L_SQUARE_BRACE Expression R_SQUARE_BRACE SquareBraceList'''
 
 def p_ModifierList(p):
   ''' ModifierList : Modifier ModifierList
@@ -220,7 +221,7 @@ def p_MethodOrFieldDecl(p):
           errorReport('Error at line no ' + str(p.lineno(2)) + ', ' + '"' + p[3][i] + '"' + ' is already defined')
         else:
           symbolTable.insert({'Name':p[3][i], 'Type':p[1], 'Value':None})
-          p[0] = VariableDeclaration(p[3][i]['Name'], None, p[0])
+          p[0] = VariableDeclaration(p[3][i], None, p[0])
   else:
     if(symbolTable.lookupScope(p[2])):
       errorReport('Error at line no ' + str(p.lineno(2)) + ', '+ '"' + p[2] + '"' + ' is already defined')
@@ -401,7 +402,7 @@ def p_LocalVariableDeclarationStatement(p):
             symbolTable.insert({'Name':p[2][i]['Name'], 'Type':p[1], 'Value':p[2][i]['Value']})
             p[0] = VariableDeclaration(p[2][i]['Name'], p[2][i]['Value'], p[0])
           else:
-            errorReport(message= 'Error at line no ' + str(p.lineno(3))+ 'Type Mismatch: expected "' + p[1]['Type'] + '"' + ' but found "' + p[2]['Type'] + '"')
+            errorReport(message= 'Error at line no ' + str(p.lineno(3))+ ' Type Mismatch: expected "' + p[1] + '"' + ' but found "' + p[2][i]['Type'] + '"')
       else:
         if(symbolTable.lookupScope(p[2][i])):
           errorReport('Error at line no ' + str(p.lineno(3)) + ', ' + '"' + p[2][i] + '"' + ' is already defined')
@@ -418,7 +419,7 @@ def p_LocalVariableDeclarationStatement(p):
             symbolTable.insert({'Name':p[3][i]['Name'], 'Type':p[2], 'VariableModifier': p[1], 'Value':p[3][i]['Value']})
             p[0] = VariableDeclaration(p[3][i], p[3][i]['Value'], p[0])
           else:
-            errorReport(message='Error at line no ' + str(p.lineno(3)) + ', '+ 'Type Mismatch: expected "' + p[2]['Type'] + '"' + ' but found "' + p[3]['Type'] + '"')
+            errorReport(message='Error at line no ' + str(p.lineno(3)) + ', '+ 'Type Mismatch: expected "' + p[2] + '"' + ' but found "' + p[3][i]['Type'] + '"')
       else:
         if(symbolTable.lookupScope(p[3][i], scope)):
           errorReport('Error at line no ' + str(p.lineno(3)) + ', '+ '"' + p[3][i] + '"' + ' is already defined')
@@ -469,12 +470,7 @@ def p_Statement(p):
   elif(p[1]=='for'):
     p[0] = ForLoopStatement(p[3], p[5])
   else:
-    p[0] = p[1]
-
-
-
-
-             
+    p[0] = p[1]          
 
 def p_StatementExpression(p):
   '''StatementExpression : Expression'''
@@ -617,9 +613,9 @@ def p_Expression(p):
     p[0] = p[1]
   else:
     if(p[1]['Type'] == p[3]['Type']):
-      p[0] = {'Type': p[1]['Type'], 'Value': BinaryExpression(p[3]['Value'], p[2], p[1]['Value'])}
+      p[0] = {'Type': p[1]['Type'], 'Value': AssignmentExpression(p[3]['Value'], p[2]['op'], p[1]['Value'])}
     else:
-      errorReport(message='Error near ' + p[2] + ' Type Mismatch: expected "' + p[1]['Type'] + '"' + ' but found "' + p[3]['Type'] + '"' )
+      errorReport(message='Error at line no ' + p[2]['lineNo'] + ' Type Mismatch: expected "' + p[1]['Type'] + '"' + ' but found "' + p[3]['Type'] + '"' )
   
 def p_AssignmentOperator(p):
   '''AssignmentOperator : ASSIGNMENT 
@@ -634,7 +630,7 @@ def p_AssignmentOperator(p):
                         | L_SHIFT_ASSIGNMENT
                         | R_SHIFT_ASSIGNMENT
                         | RR_SHIFT_ASSIGNMENT'''
-  p[0] = p[1]
+  p[0] = {'op':p[1], 'lineNo': str(p.lineno(1))}
   
 def p_Expression1(p) :
   '''Expression1 : Expression2
@@ -674,6 +670,11 @@ def p_Expression2(p) :
           operandStack.push({'Type': 'boolean', 'Value': BinaryExpression(operandStack.pop()['Value'], operatorStack.pop(), operandStack.pop()['Value'])})
         else:
           errorReport('Error: ' + str(p.lineno(1)) +', Error: cannot perform comparision on different types')
+    elif(operatorStack.top() in logicOp):
+        if((operandStack.top()['Type']=='boolean') and (operandStack.nthFromTop(2)['Type'] == 'boolean')):
+          operandStack.push({'Type': 'boolean', 'Value': BinaryExpression(operandStack.pop()['Value'], operatorStack.pop(), operandStack.pop()['Value'])})
+        else:
+          errorReport('Error: ' + str(p.lineno(1)) +', Error: logical operation can only perform between boolean types')
   p[0] = operandStack.pop()
   
 
@@ -745,7 +746,7 @@ def p_Expression3(p):
                  | Primary  DOT QualifiedIdentifier  PostfixOpList 
                  | Primary PostfixOpList  '''
   if(len(p) == 3):
-    if(type(p[2]) is dict):
+    if(type(p[2]) is not list):
       if(len(p[1]) == 0):
         p[0] = p[2]
       else:

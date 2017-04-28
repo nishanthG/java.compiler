@@ -1,3 +1,6 @@
+from threeAddressCode import ThreeAddressCode
+tac = ThreeAddressCode()
+
 class Program:
 	def __init__(self, classDecl, next):
 		self._classDecl = classDecl
@@ -7,6 +10,12 @@ class Program:
 			return str(self._classDecl) + "\n" + str(next)
 		else:
 			return str(self._classDecl) 
+	def getTac(self):
+		if(self._next):
+			self._classDecl.getTac()
+			self._next.getTac()
+		else:
+			self._classDecl.getTac()
 
 class ClassDeclaration:
 	def __init__(self, className, classBody):
@@ -14,6 +23,8 @@ class ClassDeclaration:
 		self._classBody = classBody
 	def __repr__(self):
 		return self._className + "{ " + str(self._classBody) + " }"
+	def getTac(self):
+		self._classBody.getTac()
 
 class ClassBody:
 	def __init__(self, classBodyDecl, next):
@@ -24,6 +35,12 @@ class ClassBody:
 			return str(self._classBodyDecl) + "\n"  + str(self._next)
 		else:
 			return str(self._classBodyDecl)
+	def getTac(self):
+		if(self._next):
+			self._classBodyDecl.getTac()
+			self._next.getTac()
+		else:
+			self._classBodyDecl.getTac()
 
 
 class VariableDeclaration:
@@ -36,9 +53,17 @@ class VariableDeclaration:
 			return self._varName + " = " + str(self._varValue) + ", " + str(self._next)
 		else:
 			return self._varName + " = " + str(self._varValue)
-
 	def setNext(self, next):
 		self._next = next
+	def getTac(self):
+		if(self._next):
+			self._next.getTac()
+			if(self._varValue):
+				tac.gen(str(self._varName) + " = " + str(self._varValue.getTac()))
+		else:
+			if(self._varValue):
+				tac.gen(str(self._varName) + " = " + str(self._varValue.getTac()))
+
 
 class MethodDeclaration:
 	def __init__(self, methodName, methodBody):
@@ -46,6 +71,8 @@ class MethodDeclaration:
 		self._methodBody = methodBody
 	def __repr__(self):
 		return self._methodName + str(self._methodBody)
+	def getTac(self):
+		self._methodBody.getTac()
 
 class MethodBody:
 	def __init__(self, parameters, block):
@@ -53,6 +80,8 @@ class MethodBody:
 		self._block = block
 	def __repr__(self):
 		return "(" + str(self._parameters) + ")" + str(self._block)
+	def getTac(self):
+		self._block.getTac()
 
 
 class Parameters:
@@ -75,6 +104,8 @@ class Block:
 		self._statements = statements
 	def __repr__(self):
 		return "{" + str(self._statements) + "}"
+	def getTac(self):
+		self._statements.getTac()
 
 class BlockStatements:
 	def __init__(self, statement, next):
@@ -85,6 +116,12 @@ class BlockStatements:
 			return str(self._statement) + "\n" + str(self._next)
 		else:
 			return str(self._statement)
+	def getTac(self):
+		if(self._next):
+			self._statement.getTac()
+			self._next.getTac()
+		else:
+			self._statement.getTac()
 
 class ColonStatement:
 	def __init__(self, identifier, statement):
@@ -183,6 +220,15 @@ class ForUpdate:
 		else:
 			return str(self._statement)
 
+class AssignmentExpression:
+	def __init__(self, rhs, operator, lhs):
+		self._lhs = lhs
+		self._rhs = rhs
+		self._operator = operator
+	def __str__(self):
+		return str(self._lhs) + self._operator + str(self._rhs)
+	def getTac(self):
+		tac.gen(str(self._lhs.getTac()) + " = " + self._rhs.getTac())
 
 class BinaryExpression:
 	def __init__(self, rhs, operator, lhs):
@@ -191,6 +237,10 @@ class BinaryExpression:
 		self._operator = operator
 	def __str__(self):
 		return str(self._lhs) + self._operator + str(self._rhs)
+	def getTac(self):
+		temp = tac.newTemp()
+		tac.gen(temp + " = " + str(self._lhs.getTac()) + self._operator + str(self._rhs.getTac()))
+		return temp
 
 class UnaryExpression:
 	def __init__(self, sign, operand):
@@ -198,6 +248,10 @@ class UnaryExpression:
 		self._operand = operand
 	def __str__(self):
 		return self._sign[0] + str(self._operand)
+	def getTac(self):
+		temp = tac.newTemp()
+		tac.gen(temp + " = " + str(self._sign[0]) + " " + self._operand.getTac())
+		return temp
 
 class ConditionalExpression:
 	def __init__(self, condition, ifTrue, ifFalse):
@@ -213,6 +267,9 @@ class Leaf():
 		self._lexeme = lexeme
 	def __str__(self):
 		return str(self._lexeme)
+
+	def getTac(self):
+		return self._lexeme
 
 
 
