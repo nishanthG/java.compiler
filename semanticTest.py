@@ -5,6 +5,7 @@ import ply.lex as lex
 import semanticAnalysis
 import lexer
 from semanticAnalysis import symbolTables, ast
+from ast import tac
 
 
 
@@ -20,7 +21,7 @@ result = parser.parse(contents)
 data = 'Name        Type        Value \n\n'
 for symbolTable in symbolTables:
     for symbol in symbolTable.table:
-        data += symbol['Name'] + "      " + symbol['Type'] + "      "+ str(symbol['Value'])  + '\n'
+        data += symbol['Name'] + "      " + str(symbol['Type']) + "      "+ str(symbol['Value'])  + '\n'
         #data += str(symbol)
     data += '\n'
 f = open('SymbolTable.csv',"w+")
@@ -29,4 +30,15 @@ f = open("Ast.text", "w+")
 f.write(str(ast[1]))
 #print ast
 ast[1].getTac()
-f.close
+
+f1 = open("tac.text", "w+")
+f2 = open("tac1.text", "w+")
+print tac.getVariables()
+print "\n"
+print tac.getTemps()
+print "\n"
+tac.getTacFile("tac.text")
+tac.optimizeTac()
+tac.getTacFile("tac1.text")
+print tac.getTemps()
+print "\n"

@@ -1,0 +1,42 @@
+i = 1 
+b = 1 
+t4 = c * 4 
+t4 = 5 + t4 
+t4 = t4 + i 
+t4 = t4 * i 
+t4 = t4 * 5 
+b = t4 
+c = 1 
+if i <= b goto L0 
+goto L1 
+L0 
+t4 = c + b 
+b = t4 
+L1 
+t4 = i + 4 
+t7 = 6 + b 
+L4 
+if t4 > t7 goto L2 
+goto L3 
+L2 
+t4 = b + 6 
+b = t4 
+goto L4 
+L3 
+L7 
+t4 = b + 8 
+b = t4 
+if i < 6 goto L7 
+goto L6 
+L6 
+i = 0 
+L10 
+if i < 6 goto L8 
+goto L9 
+L8 
+t4 = b + 1 
+b = t4 
+t4 = i + 5 
+i = t4 
+goto L10 
+L9 

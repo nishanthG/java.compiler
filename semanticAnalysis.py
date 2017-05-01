@@ -10,23 +10,23 @@ symbolTable = SymbolTable(None)
 symbolTables.append(symbolTable)
 operatorStack = Stack()
 operandStack = Stack()
-priority = {  '+': 1,
-              '-': 1,
-              '*': 2,
-              '/': 2,
-              '%': 2,
-              '^': 3,
-              '==': 4,
-              '!=': 4,
-              '<': 5,
-              '>': 5,
-              '<=': 5,
-              '>=': 5,
+priority = {  '+': 1 + 9,
+              '-': 1 + 9,
+              '*': 2 + 9,
+              '/': 2 + 9,
+              '%': 2 + 9,
+              '^': 3 + 9,
+              '==': 4 + 4,
+              '!=': 4 + 4,
+              '<': 5 + 4,
+              '>': 5 + 4,
+              '<=': 5 + 4,
+              '>=': 5 + 4,
               '|': 6,
               '&': 7 }
 arithOp = ['+', '-', '*', '/']
 compOp = ['<', '>', '<=', '>=', '==', '!=']
-logicalOp = ['|', '&']
+logicalOp = ['|', '&', '!']
 
 def p_CompilationUnit(p):
   '''CompilationUnit : PACKAGE QualifiedIdentifier SEMICOLON ImportDeclarationList TypeDeclarationList 
@@ -97,6 +97,13 @@ def p_SquareBraceList(p):
   '''SquareBraceList : 
                   | L_SQUARE_BRACE R_SQUARE_BRACE SquareBraceList
                   | L_SQUARE_BRACE Expression R_SQUARE_BRACE SquareBraceList'''
+  if(len(p)==5):
+    if(p[2]['Type'] == 'int'):
+      p[0] = p[2]['Value']
+    else:
+      errorReport("Errar at line no: " + str(p.lineno(1)) + " Array index must be integer, found " + str(p[2]['Type']))
+  else:
+    p[0] = ''
 
 def p_ModifierList(p):
   ''' ModifierList : Modifier ModifierList
@@ -108,8 +115,11 @@ def p_ModifierList(p):
 
 def p_Type(p): 
   '''Type : BasicType SquareBraceList
-          | QualifiedIdentifier SquareBraceList''' 
-  p[0] = p[1]
+          | QualifiedIdentifier SquareBraceList'''
+  if(p[2] == ''):
+    p[0] = p[1]
+  else:
+    p[0] = (p[2], p[1])
 
 def p_BasicType(p):
   '''BasicType : BYTE
@@ -353,10 +363,16 @@ def p_VariableInitializer(p):
 def p_VariableInitializerList(p):
   ''' VariableInitializerList : VariableInitializer
                           | VariableInitializer COMMA VariableInitializerList '''
+  if(len(p)==2):
+    p[0] = ArrayInitializer(p[1], None)
+  else:
+    p[0] = ArrayInitializer(p[1], p[3])
+
                        
 def p_ArrayInitializer(p):
   ''' ArrayInitializer : L_SQUARE_BRACE VariableInitializerList R_SQUARE_BRACE 
                        | L_SQUARE_BRACE VariableInitializerList R_SQUARE_BRACE COMMA '''
+  p[0] = p[2]
   
 def p_Block(p):
   '''Block : L_CURL_BRACE Marker3 BlockStatements R_CURL_BRACE'''
@@ -670,7 +686,7 @@ def p_Expression2(p) :
           operandStack.push({'Type': 'boolean', 'Value': BinaryExpression(operandStack.pop()['Value'], operatorStack.pop(), operandStack.pop()['Value'])})
         else:
           errorReport('Error: ' + str(p.lineno(1)) +', Error: cannot perform comparision on different types')
-    elif(operatorStack.top() in logicOp):
+    elif(operatorStack.top() in logicalOp):
         if((operandStack.top()['Type']=='boolean') and (operandStack.nthFromTop(2)['Type'] == 'boolean')):
           operandStack.push({'Type': 'boolean', 'Value': BinaryExpression(operandStack.pop()['Value'], operatorStack.pop(), operandStack.pop()['Value'])})
         else:
@@ -723,10 +739,14 @@ def p_InfixOp(p):
           errorReport('Error at line no ' + str(p.lineno(1))+', Type Mismatch')
       elif(operatorStack.top() in compOp):
         if(operandStack.top()['Type'] == operandStack.nthFromTop(2)['Type']):
-          operandStack.push({'Type': 'boolean', 'Value': BinaryExpression(operandStack.pop(), operatorStack.pop(), operandStack.pop())})
+          operandStack.push({'Type': 'boolean', 'Value': BinaryExpression(operandStack.pop()['Value'], operatorStack.pop(), operandStack.pop()['Value'])})
         else:
           errorReport('Error at line no ' + str(p.lineno(1))+', cannot perform comparision on different types')
-      
+      elif(operatorStack.top() in logicalOp):
+        if((operandStack.top()['Type']=='boolean') and (operandStack.nthFromTop(2)['Type'] == 'boolean')):
+          operandStack.push({'Type': 'boolean', 'Value': BinaryExpression(operandStack.pop()['Value'], operatorStack.pop(), operandStack.pop()['Value'])})
+        else:
+          errorReport('Error: ' + str(p.lineno(1)) +', Error: logical operation can only perform between boolean types')
       if(operatorStack.isEmpty()):
         break
     operatorStack.push(p[0])
@@ -782,10 +802,16 @@ def p_Primary(p):
              | SUPER SuperSuffix 
              | QualifiedIdentifier 
              | QualifiedIdentifier IdentifierSuffix
+             | QualifiedIdentifier SquareBraceList 
              | BasicType SquareBraceList DOT CLASS
              | VOID DOT CLASS'''
   if(len(p) == 2):
     p[0] = p[1]
+  else:
+    if(p[2]==''):
+      p[0] = p[1]
+    else:
+      p[0] = {'Type': p[1]['Type'][1], 'Value': Array(p[1]['Value'], p[2])}
 
   
 def p_Literal(p):
