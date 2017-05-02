@@ -6,7 +6,7 @@ from SymbolTable import SymbolTable
 
 ast = []
 symbolTables = []
-symbolTable = SymbolTable(None)
+symbolTable = SymbolTable("Global", None)
 symbolTables.append(symbolTable)
 operatorStack = Stack()
 operandStack = Stack()
@@ -83,12 +83,7 @@ def p_NormalClassDeclaration(p):
   '''NormalClassDeclaration : CLASS IDENTIFIER ClassBody
                             | CLASS IDENTIFIER  EXTENDS Type  ClassBody
                             | CLASS IDENTIFIER  IMPLEMENTS TypeList  ClassBody
-                            | CLASS IDENTIFIER  EXTENDS Type IMPLEMENTS TypeList  ClassBody'''
-  if(symbolTable.lookup(p[1])):
-    errorReport('Error at' + str(p.lineno(2)) + ' "' + p[2] + '" ' + ' is already defined')
-  else:
-    symbolTable.insert({'Name':p[2], 'Type':p[1], 'Value': None})  
-  
+                            | CLASS IDENTIFIER  EXTENDS Type IMPLEMENTS TypeList  ClassBody'''  
   if(len(p) == 4):
     p[0] = ClassDeclaration(p[2], p[3])  
 
@@ -152,16 +147,9 @@ def p_Modifier(p):
   p[0] = p[1]
 
 def p_ClassBody(p):
-  '''ClassBody : L_CURL_BRACE Marker1 ClassBodyDeclarationList R_CURL_BRACE '''
-  global symbolTable
-  symbolTable = symbolTable.parent
-  p[0] = p[3]
+  '''ClassBody : L_CURL_BRACE ClassBodyDeclarationList R_CURL_BRACE '''
+  p[0] = p[2]
 
-def p_Marker1(p):
-  '''Marker1 :  '''
-  global symbolTable
-  symbolTable = SymbolTable(symbolTable)
-  symbolTables.append(symbolTable)
 
 def p_ClassBodyDeclarationList(p):
   ''' ClassBodyDeclarationList : ClassBodyDeclaration ClassBodyDeclarationList
@@ -281,8 +269,8 @@ def p_VoidMethodDeclaratorRest(p):
 
 
 def p_FormalParameters(p):
-  '''FormalParameters : L_BRACE Marker2 R_BRACE
-                      | L_BRACE Marker2 FormalParameterDecls R_BRACE '''
+  '''FormalParameters : Marker2 L_BRACE R_BRACE
+                      | Marker2 L_BRACE FormalParameterDecls R_BRACE '''
   if(len(p)==5):
     p[0] = p[3]
 
@@ -290,7 +278,7 @@ def p_FormalParameters(p):
 def p_Marker2(p):
   '''Marker2 :  '''
   global symbolTable
-  symbolTable = SymbolTable(symbolTable)
+  symbolTable = SymbolTable(p[-1], symbolTable)
   symbolTables.append(symbolTable)
 
   
@@ -309,13 +297,13 @@ def p_FormalParameterDecls(p):
     if(symbolTable.lookupScope(p[2].getParName())):
       errorReport('Error : '+ p[2].getParName() + ' is already defined')
     else:
-      symbolTable.insert({'Name': p[2].getParName(), 'Type':p[1], 'Value': None})
+      symbolTable.insert({'Name': p[2].getParName(), 'Type':p[1], 'Value': None, 'Param': p[2].getParName()})
       p[0] = p[2]
   else:
     if(symbolTable.lookupScope(p[3].getParName())):
       errorReport('Error :' + p[3].getParName() + ' is already defined')
     else:
-      symbolTable.insert({'Name': p[3].getParName(), 'Type':p[2], 'VariableModifier': p[1], 'Value': None})
+      symbolTable.insert({'Name': p[3].getParName(), 'Type':p[2], 'VariableModifier': p[1], 'Value': None, 'Param': p[3].getParName()})
       p[0] = p[3]
   
 def p_FormalParameterDeclsRest(p):
@@ -375,16 +363,9 @@ def p_ArrayInitializer(p):
   p[0] = p[2]
   
 def p_Block(p):
-  '''Block : L_CURL_BRACE Marker3 BlockStatements R_CURL_BRACE'''
-  global symbolTable
-  symbolTable = symbolTable.parent
-  p[0] = Block(p[3])
+  '''Block : L_CURL_BRACE BlockStatements R_CURL_BRACE'''
+  p[0] = Block(p[2])
 
-def p_Marker3(p):
-  '''Marker3 :  '''
-  global symbolTable
-  symbolTable = SymbolTable(symbolTable)
-  symbolTables.append(symbolTable)
   
 def p_BlockStatements(p):
   '''BlockStatements : BlockStatement BlockStatements 
@@ -485,6 +466,11 @@ def p_Statement(p):
     p[0] = SwitchStatment(p[2]['Value'], p[4])
   elif(p[1]=='for'):
     p[0] = ForLoopStatement(p[3], p[5])
+  elif(p[1]=="return"):
+    if(len(p)==4):
+      p[0] = ReturnStatement(p[2]["Value"])
+    else:
+      p[0] = ReturnStatement(None) 
   else:
     p[0] = p[1]          
 
@@ -764,13 +750,17 @@ def p_Expression3(p):
                  | L_BRACE  Expression R_BRACE  Expression3
                  | L_BRACE  Type R_BRACE  Expression3
                  | Primary  DOT QualifiedIdentifier  PostfixOpList 
-                 | Primary PostfixOpList  '''
+                 | Primary PostfixOpList  
+                 | QualifiedIdentifier Arguments'''
   if(len(p) == 3):
     if(type(p[2]) is not list):
-      if(len(p[1]) == 0):
-        p[0] = p[2]
+      if(type(p[1]) is str):
+        if(len(p[1]) == 0):
+          p[0] = p[2]
+        else:
+          p[0] = {'Type': p[2]['Type'], 'Value': UnaryExpression(p[1], p[2]['Value'])}
       else:
-        p[0] = {'Type': p[2]['Type'], 'Value': UnaryExpression(p[1], p[2]['Value'])}
+        p[0] = {"Type": p[1]["Type"], "Value": MethodCall(p[1]["Value"], p[2], p[1]["Type"])}
     else:
       if(len(p[2]) == 0):
         p[0] = p[1]
@@ -837,12 +827,12 @@ def p_ExpressionList(p):
   '''ExpressionList : Expression
                     | Expression COMMA ExpressionList   '''
   if(len(p)==2):
-    p[0] = Arguments(p[1], None)
+    p[0] = Arguments(p[1]["Value"], None)
   else:
-    p[0] = Arguments(p[1], p[3])
+    p[0] = Arguments(p[1]["Value"], p[3])
   
 def p_Arguments(p):
-  '''Arguments :  L_BRACE ExpressionList L_BRACE '''
+  '''Arguments :  L_BRACE ExpressionList R_BRACE '''
   p[0] = p[2]
   
 def p_SuperSuffix(p):

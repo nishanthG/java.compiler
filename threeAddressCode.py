@@ -1,12 +1,13 @@
+
 class ThreeAddressCode:
 	
 	def __init__(self):
 		self._tac = []
-		self._variables = []
 		self._temps = []
 		self._LastUse = {}
 		self._temp_no = -1
 		self._label_no = -1
+
 	
 	def newTemp(self):
 		self._temp_no += 1
@@ -25,18 +26,20 @@ class ThreeAddressCode:
 	def getTacFile(self, filename):
 		file = open(filename,"a")
 		for instr in self.getTac():
+			if(len(instr)==2):
+				if(instr[1] != ":"):
+					file.write("	")
+			else:
+				file.write("	")
 			for a in instr:
-				file.write(a + " ")
+				if(len(instr)==2):
+					if(instr[1]==":"):
+						file.write(a)
+					else:
+						file.write(a + " ")
+				else:
+					file.write(str(a) + " ")
 			file.write("\n")
-	
-	def addVariable(self, variable):
-		self._variables.append(variable)
-	
-	def getVariables(self):
-		return self._variables
-	
-	def isVar(self, symbol):
-		return symbol in self._variables
 
 	def addTemp(self, temp):
 		self._temps.append(temp)
@@ -101,10 +104,6 @@ class ThreeAddressCode:
 						self.deleteLastUse(instr[0])
 						self.replaceTempInCode(instr[0], temp)
 						self.calcLastUse()
-				
-
-
-
 			instrNo += 1
 		return self.getTac()
 

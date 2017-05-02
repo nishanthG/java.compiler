@@ -10,12 +10,13 @@ class Program:
 			return str(self._classDecl) + "\n" + str(next)
 		else:
 			return str(self._classDecl) 
-	def getTac(self):
+	def genTac(self):
 		if(self._next):
-			self._classDecl.getTac()
-			self._next.getTac()
+			self._classDecl.genTac()
+			self._next.genTac()
 		else:
-			self._classDecl.getTac()
+			self._classDecl.genTac()
+		return tac
 
 class ClassDeclaration:
 	def __init__(self, className, classBody):
@@ -23,8 +24,8 @@ class ClassDeclaration:
 		self._classBody = classBody
 	def __repr__(self):
 		return self._className + "{ " + str(self._classBody) + " }"
-	def getTac(self):
-		self._classBody.getTac()
+	def genTac(self):
+		self._classBody.genTac()
 
 class ClassBody:
 	def __init__(self, classBodyDecl, next):
@@ -35,12 +36,12 @@ class ClassBody:
 			return str(self._classBodyDecl) + "\n"  + str(self._next)
 		else:
 			return str(self._classBodyDecl)
-	def getTac(self):
+	def genTac(self):
 		if(self._next):
-			self._classBodyDecl.getTac()
-			self._next.getTac()
+			self._classBodyDecl.genTac()
+			self._next.genTac()
 		else:
-			self._classBodyDecl.getTac()
+			self._classBodyDecl.genTac()
 
 
 class VariableDeclaration:
@@ -55,19 +56,17 @@ class VariableDeclaration:
 			return self._varName + " = " + str(self._varValue)
 	def setNext(self, next):
 		self._next = next
-	def getTac(self):
+	def genTac(self):
 		if(self._next):
-			self._next.getTac()
+			self._next.genTac()
 			if(self._varValue):
-				varValue = str(self._varValue.getTac())
+				varValue = str(self._varValue.genTac())
 				
 				tac.addInstr([self._varName, '=', varValue])
-			tac.addVariable(self._varName)
 		else:
 			if(self._varValue):
-				varValue = str(self._varValue.getTac())
+				varValue = str(self._varValue.genTac())
 				tac.addInstr([self._varName, '=', varValue])
-			tac.addVariable(self._varName)
 
 
 class MethodDeclaration:
@@ -76,8 +75,10 @@ class MethodDeclaration:
 		self._methodBody = methodBody
 	def __repr__(self):
 		return self._methodName + str(self._methodBody)
-	def getTac(self):
-		self._methodBody.getTac()
+	def genTac(self):
+		tac.addInstr([self._methodName, ":"])
+		self._methodBody.genTac()
+		tac.addInstr(["end", self._methodName])
 
 class MethodBody:
 	def __init__(self, parameters, block):
@@ -85,8 +86,8 @@ class MethodBody:
 		self._block = block
 	def __repr__(self):
 		return "(" + str(self._parameters) + ")" + str(self._block)
-	def getTac(self):
-		self._block.getTac()
+	def genTac(self):
+		self._block.genTac()
 
 
 class Parameters:
@@ -105,22 +106,54 @@ class Parameters:
 		return self._next
 
 class MethodCall:
-	def __init__(self, methodName, arguments):
+	def __init__(self, methodName, arguments, returnType):
 		self._methodName = methodName
 		self._arguments = arguments
+		self._returnType = returnType
+
+	def genTac(self):
+		self._arguments.genTac()
+		name = self._methodName.genTac()
+		argCount = self._arguments.getCount()
+
+		if(self._returnType == "void"):
+			tac.addInstr(["call", name, str(argCount)])
+		else:
+			tac.addInstr(["call", name, str(argCount+1)])
+			return name
+
 
 class Arguments:
 	def __init__(self, argument, next):
 		self._argument = argument
 		self._next = next
 
+	def getCount(self):
+		count = 1
+		temp = self._next
+		while(temp):
+			count += 1
+			temp = temp._next
+		return count
+	
+	def genTac(self):
+		if(self._next):
+			temp = str(self._argument.genTac())
+			tac.addInstr(["param", temp])
+			self._next.genTac()
+		else:
+			temp = str(self._argument.genTac())
+			tac.addInstr(["param", temp])
+
+
+
 class Block:
 	def __init__(self, statements):
 		self._statements = statements
 	def __repr__(self):
 		return "{" + str(self._statements) + "}"
-	def getTac(self):
-		self._statements.getTac()
+	def genTac(self):
+		self._statements.genTac()
 
 class BlockStatements:
 	def __init__(self, statement, next):
@@ -131,12 +164,12 @@ class BlockStatements:
 			return str(self._statement) + "\n" + str(self._next)
 		else:
 			return str(self._statement)
-	def getTac(self):
+	def genTac(self):
 		if(self._next):
-			self._statement.getTac()
-			self._next.getTac()
+			self._statement.genTac()
+			self._next.genTac()
 		else:
-			self._statement.getTac()
+			self._statement.genTac()
 
 class ColonStatement:
 	def __init__(self, identifier, statement):
@@ -152,18 +185,18 @@ class IfStatement:
 	def __repr__(self):
 		return "if(" + str(self._expression) + ")" + str(self._statement)
 	
-	def getTac(self):
+	def genTac(self):
 		ltrue = tac.newLabel()
 		lfalse = tac.newLabel()
-		lOperand = str(self._expression._lhs.getTac())
-		rOperand = str(self._expression._rhs.getTac())
+		lOperand = str(self._expression._lhs.genTac())
+		rOperand = str(self._expression._rhs.genTac())
 		op = self._expression._operator
 		
 		tac.addInstr(['if', lOperand, op, rOperand, 'goto', ltrue])
 		tac.addInstr(['goto', lfalse])
-		tac.addInstr([ltrue])
-		self._statement.getTac()
-		tac.addInstr([lfalse])
+		tac.addInstr([ltrue, ":"])
+		self._statement.genTac()
+		tac.addInstr([lfalse, ":"])
 
 class IfElseStatement:
 	def __init__(self, expression, ifStatement, elseStatement):
@@ -173,22 +206,22 @@ class IfElseStatement:
 	def __repr__(self):
 		return "if(" + str(self._expression) + ")" + str(self._ifStatement) + " else" + str(self._elseStatement)
 	
-	def getTac(self):
+	def genTac(self):
 		ltrue = tac.newLabel()
 		lfalse = tac.newLabel()
 		lafter = tac.newLabel()
-		lOperand =str(self._expression._lhs.getTac())
-		rOperand = str(self._expression._rhs.getTac())
+		lOperand =str(self._expression._lhs.genTac())
+		rOperand = str(self._expression._rhs.genTac())
 		op = self._expression._operator
 		
 		tac.addInstr(['if', lOperand, op, rOperand, 'goto', ltrue])
 		tac.addInstr(["goto", lfalse])
-		tac.addInstr([ltrue])
-		self._ifStatement.getTac()
+		tac.addInstr([ltrue, ":"])
+		self._ifStatement.genTac()
 		tac.addInstr(["goto", lafter])
-		tac.addInstr([lfalse])
-		self._elseStatement.getTac()
-		tac.addInstr([lafter])
+		tac.addInstr([lfalse, ":"])
+		self._elseStatement.genTac()
+		tac.addInstr([lafter, ":"])
 
 class WhileLoopStatement:
 	def __init__(self, expression, statement):
@@ -197,21 +230,21 @@ class WhileLoopStatement:
 	def __repr__(self):
 		return "while(" + str(self._expression) + ")" + str(self._statement)
 	
-	def getTac(self):
+	def genTac(self):
 		ltrue = tac.newLabel()
 		lafter = tac.newLabel()
 		lbegin = tac.newLabel()
-		lOperand = str(self._expression._lhs.getTac())
-		rOperand = str(self._expression._rhs.getTac())
+		lOperand = str(self._expression._lhs.genTac())
+		rOperand = str(self._expression._rhs.genTac())
 		op = self._expression._operator
 
-		tac.addInstr([lbegin])
+		tac.addInstr([lbegin, ":"])
 		tac.addInstr(['if', lOperand, op, rOperand, "goto", ltrue])
 		tac.addInstr(["goto", lafter])
-		tac.addInstr([ltrue])
-		self._statement.getTac()
+		tac.addInstr([ltrue, ":"])
+		self._statement.genTac()
 		tac.addInstr(["goto", lbegin])
-		tac.addInstr([lafter])
+		tac.addInstr([lafter, ":"])
 
 class DoWhileLoopStatement:
 	def __init__(self, statement, expression):
@@ -221,19 +254,18 @@ class DoWhileLoopStatement:
 
 	def __repr__(self):
 		return  "do " + str(self._statement) + "while(" + str(self._expression) + ")"
-	def getTac(self):
-		ltrue = tac.newLabel()
+	def genTac(self):
 		lafter = tac.newLabel()
 		lbegin = tac.newLabel()
-		lOperand = str(self._expression._lhs.getTac())
-		rOperand = str(self._expression._rhs.getTac())
+		lOperand = str(self._expression._lhs.genTac())
+		rOperand = str(self._expression._rhs.genTac())
 		op = self._expression._operator
 
-		tac.addInstr([lbegin])
-		self._statement.getTac()		
+		tac.addInstr([lbegin, ":"])
+		self._statement.genTac()		
 		tac.addInstr(['if', lOperand, op, rOperand, "goto", lbegin])
 		tac.addInstr(["goto", lafter])
-		tac.addInstr([lafter])
+		tac.addInstr([lafter, ":"])
 		
 
 class ReturnStatement:
@@ -241,6 +273,10 @@ class ReturnStatement:
 		self._expression = expression
 	def __repr(self):
 		return "return " + str(self._expression)
+
+	def genTac(self):
+		ret = self._expression.genTac()
+		tac.addInstr(["return", ret])
 
 class SwitchStatement:
 	def __init__(self, expression, switchBlockStatementGroup):
@@ -267,24 +303,24 @@ class ForLoopStatement:
 	def __repr__(self):
 		return "for(" + str(self._forControl) + ")" + str(self._statement)
 
-	def getTac(self):
+	def genTac(self):
 		ltrue = tac.newLabel()
 		lafter = tac.newLabel()
 		lbegin = tac.newLabel()
-		lOperand = str(self._forControl._forCondition._lhs.getTac())
-		rOperand = str(self._forControl._forCondition._rhs.getTac())
+		lOperand = str(self._forControl._forCondition._lhs.genTac())
+		rOperand = str(self._forControl._forCondition._rhs.genTac())
 		op = self._forControl._forCondition._operator
 
-		self._forControl._forInit.getTac()
+		self._forControl._forInit.genTac()
 
-		tac.addInstr([lbegin])
+		tac.addInstr([lbegin, ":"])
 		tac.addInstr(['if', lOperand, op, rOperand, "goto", ltrue])
 		tac.addInstr(["goto", lafter])
-		tac.addInstr([ltrue])
-		self._statement.getTac()
-		self._forControl._forUpdate.getTac()
+		tac.addInstr([ltrue, ":"])
+		self._statement.genTac()
+		self._forControl._forUpdate.genTac()
 		tac.addInstr(["goto", lbegin])
-		tac.addInstr([lafter])
+		tac.addInstr([lafter, ":"])
 
 class ForControl:
 	def __init__(self, forInit, forCondition, forUpdate):
@@ -316,12 +352,12 @@ class ForUpdate:
 			return str(self._statement) + ", " + str(self._next)
 		else:
 			return str(self._statement)
-	def getTac(self):
+	def genTac(self):
 		if(self._next):
-			self._statement.getTac()
-			self._next.getTac()
+			self._statement.genTac()
+			self._next.genTac()
 		else:
-			self._statement.getTac()
+			self._statement.genTac()
 
 class AssignmentExpression:
 	def __init__(self, rhs, operator, lhs):
@@ -331,9 +367,9 @@ class AssignmentExpression:
 	def __repr__(self):
 		return str(self._lhs) + self._operator + str(self._rhs)
 	
-	def getTac(self):
-		lhs = str(self._lhs.getTac())
-		rhs = str(self._rhs.getTac())
+	def genTac(self):
+		lhs = str(self._lhs.genTac())
+		rhs = str(self._rhs.genTac())
 		op = self._operator 
 
 		tac.addInstr([lhs, op, rhs])
@@ -346,11 +382,11 @@ class BinaryExpression:
 	def __repr__(self):
 		return str(self._lhs) + self._operator + str(self._rhs)
 	
-	def getTac(self):
+	def genTac(self):
 		temp = tac.newTemp()
 		tac.addTemp(temp)
-		lOperand = str(self._lhs.getTac())
-		rOperand = str(self._rhs.getTac())
+		lOperand = str(self._lhs.genTac())
+		rOperand = str(self._rhs.genTac())
 		op = self._operator
 
 		tac.addInstr([temp, "=", lOperand, op, rOperand])		
@@ -362,10 +398,10 @@ class UnaryExpression:
 		self._operand = operand
 	def __repr__(self):
 		return self._sign[0] + str(self._operand)
-	def getTac(self):
+	def genTac(self):
 		temp = tac.newTemp()
 		tac.addTemp(temp)
-		operand = self._operand.getTac()
+		operand = self._operand.genTac()
 		sign = self._sign[0]
 
 		tac.addInstr([temp, "=", sign, operand])
@@ -385,10 +421,10 @@ class Array:
 		self._index = index
 	def __repr__(self):
 		return str(self._name) + "[" + str(self._index) + "]"
-	def getTac(self):
+	def genTac(self):
 		t = tac.newTemp()
 		tac.addTemp(t)
-		index = str(self._index.getTac())
+		index = str(self._index.genTac())
 
 		tac.addInstr([t, "=", index, "*", str(4)])
 		return str(self._name._lexeme) + "[" + t + "]"
@@ -408,7 +444,7 @@ class Leaf():
 	def getLexeme(self):
 		return self._lexeme
 
-	def getTac(self):		
+	def genTac(self):		
 		return self._lexeme
 
 
