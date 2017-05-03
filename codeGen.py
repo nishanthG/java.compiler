@@ -210,10 +210,10 @@ class CodeGen:
 		if value in self.getGlobVars():
 			return ["lw", reg, value]
 		elif value in self.getLocVars(func):
-			offset = -(self.getOffsetLoc(value, func))
+			offset = self._baseOffset + self.getOffsetLoc(value, func) + self.getVarSize(value, func)
 			return ["lw", reg, str(offset)+"($sp)"]
 		elif value in self.getParams(func):
-			offset = self.getOffsetParam(value, func) + self._baseOffset + 16
+			offset = self._baseOffset + 16 + self.getOffsetParam(value, func)
 			return ["lw", reg, str(offset)+"($sp)"]
 		else:
 			return ["li", reg, value]
@@ -222,19 +222,15 @@ class CodeGen:
 		if addr in self.getGlobVars():
 			return ["sw", reg, addr]
 		elif addr in self.getLocVars(func):
-			offset = -(self.getOffsetLoc(addr, func))
+			offset = self._baseOffset + self.getOffsetLoc(addr, func) + self.getVarSize(addr, func)
 			return ["sw", reg, str(offset) + "($sp)"]
 		elif addr in self.getParams(func):
-			offset = self.getOffsetParam(addr, func) + self._baseOffset + 16
+			offset =  self._baseOffset + 16 + self.getOffsetParam(addr, func)
 			return ["sw", reg, str(offset) + "($sp)"]
 		elif addr in self.getMethods():
 			return ["sw", reg, "$v0"]
 		elif type(addr) is str:
 			return ["sw", reg, addr]
-
-
-
-
 
 
 	def genMipsCode(self):
@@ -262,17 +258,17 @@ class CodeGen:
 					#self._baseOffset -= 4
 
 					
-					self.addInstr(["lw", "$ra", "-4($sp)"])					
+					self.addInstr(["lw", "$ra", "4($sp)"])					
 					#self.addInstr(["addi", "$sp", "4"])
 					#self.addOffsetLocs(-4, func)
 					#self._baseOffset -= 4
 					
-					self.addInstr(["lw", "$s1", "-8($sp)"])					
+					self.addInstr(["lw", "$s1", "8($sp)"])					
 					#self.addInstr(["addi", "$sp", "4"])
 					#self.addOffsetLocs(-4, func)
 					#self._baseOffset -= 4
 
-					self.addInstr(["lw", "$s0", "-12($sp)"])					
+					self.addInstr(["lw", "$s0", "12($sp)"])					
 					#self.addInstr(["addi", "$sp", "4"])
 					#self.addOffsetLocs(-4, func)
 					#self._baseOffset -= 4
@@ -303,19 +299,16 @@ class CodeGen:
 			elif(instr[0] == "return"):
 				if instr[1] in self._temps:
 					self.addInstr(["sw", self._temps[instr[1]], str(self._baseOffset) + "($sp)"])
-					#self.addInstr(["move", "$v0", self._temps[instr[1]]])
 				else:
 					t = self.getTempReg()
 					self.addInstr(self.load(t, instr[1], func))
 					self.addInstr(["sw", t, str(self._baseOffset) + "($sp)"])
-					#self.addInstr(["move", "$v0", t])
 
 			
 			elif(instr[0]=="param"):
 				if instr[1] in self._temps:
 					self.addInstr(["addi", "$sp", "-4"])
 					self.addInstr(self.store(self._temps[instr[1]], "0($sp)", func))
-					self.addOffsetLocs(4, func)
 					self._baseOffset += 4
 				else:	
 					t = self.getTempReg()
@@ -323,7 +316,6 @@ class CodeGen:
 					self.addInstr(["addi", "$sp", "-4"])
 					self.addInstr(self.store(t, "0($sp)", func))
 					self.resetTempReg(t)
-					self.addOffsetLocs(4, func)
 					self._baseOffset += 4
 			
 			elif(instr[0] == "call"):
@@ -331,22 +323,18 @@ class CodeGen:
 
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$s0", "0($sp)"])
-				self.addOffsetLocs(4, func)
 				self._baseOffset += 4
 
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$s1", "0($sp)"])
-				self.addOffsetLocs(4, func)
 				self._baseOffset += 4
 
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$ra", "0($sp)"])
-				self.addOffsetLocs(4, func)
 				self._baseOffset += 4
 				
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$v0", "0($sp)"])
-				self.addOffsetLocs(4, func)
 				self._baseOffset += 4
 
 				self.addInstr(["jal", instr[1]])
@@ -453,38 +441,26 @@ class CodeGen:
 
 				else:
 					if self.isFunc(instr[2]) and self.isFunc(instr[4]):
-						t1 = self.getTempReg()
-						t2 = self.getTempReg()
+						pass
 
-						self.addInstr(["move", t1, "$v0"])
-						self.addInstr(["move", t2, "$v0"])
-
-						lOperand = t1
-						rOperand = t2
-						self.resetTempReg(t1)
-						self.resetTempReg(t2)
 					elif self.isFunc(instr[2]):
 						t1 = self.getTempReg()
-						t2 = self.getTempReg()
 
-						self.addInstr(["move", t1, "$v0"])
-						self.addInstr(self.load(t2, instr[4], func))
+						self.addInstr(self.load(t1, instr[4], func))
 
-						lOperand = t1
-						rOperand = t2
+						lOperand = "$v0"
+						rOperand = t1
 						self.resetTempReg(t1)
-						self.resetTempReg(t2)
+
 					elif self.isFunc(instr[4]):
 						t1 = self.getTempReg()
-						t2 = self.getTempReg()
 
 						self.addInstr(self.load(t1, instr[2], func))
-						self.addInstr(["move", t2, "$v0"])
 
 						lOperand = t1
-						rOperand = t2
+						rOperand = "$v0"
 						self.resetTempReg(t1)
-						self.resetTempReg(t2)
+						
 					else:
 						t1 = self.getTempReg()
 						t2 = self.getTempReg()
