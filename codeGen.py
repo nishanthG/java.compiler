@@ -188,10 +188,9 @@ class CodeGen:
 			self.addInstr(["addi", "$sp", str(space)])
 
 	def popActRec(self, func):
-		space = self.getSpaceForLocs(func)
+		if self._baseOffset > 0:
+			self.addInstr(["addi", "$sp", str(self._baseOffset)])
 		self._baseOffset = self._preOff
-		if space > 0:
-			self.addInstr(["addi", "$sp", str(space)])
 
 	def getMainFirst(self):
 		for i in range(0, len(self._tac)):
@@ -258,34 +257,35 @@ class CodeGen:
 			if(instrNo > 0):
 				if(self._tac[instrNo-1][0] == "call"):
 					self.addInstr(["lw", "$v0", "0($sp)"])
-					self.addInstr(["addi", "$sp", "4"])
-					self.addOffsetLocs(-4, func)
-					self._baseOffset -= 4
+					#self.addInstr(["addi", "$sp", "4"])
+					#self.addOffsetLocs(-4, func)
+					#self._baseOffset -= 4
 
 					
-					self.addInstr(["lw", "$ra", "0($sp)"])					
-					self.addInstr(["addi", "$sp", "4"])
-					self.addOffsetLocs(-4, func)
-					self._baseOffset -= 4
+					self.addInstr(["lw", "$ra", "-4($sp)"])					
+					#self.addInstr(["addi", "$sp", "4"])
+					#self.addOffsetLocs(-4, func)
+					#self._baseOffset -= 4
 					
-					self.addInstr(["lw", "$s1", "0($sp)"])					
-					self.addInstr(["addi", "$sp", "4"])
-					self.addOffsetLocs(-4, func)
-					self._baseOffset -= 4
+					self.addInstr(["lw", "$s1", "-8($sp)"])					
+					#self.addInstr(["addi", "$sp", "4"])
+					#self.addOffsetLocs(-4, func)
+					#self._baseOffset -= 4
 
-					self.addInstr(["lw", "$s0", "0($sp)"])					
-					self.addInstr(["addi", "$sp", "4"])
-					self.addOffsetLocs(-4, func)
-					self._baseOffset -= 4
+					self.addInstr(["lw", "$s0", "-12($sp)"])					
+					#self.addInstr(["addi", "$sp", "4"])
+					#self.addOffsetLocs(-4, func)
+					#self._baseOffset -= 4
 
 
 			if(instr[1]==":"):
 				self.addInstr([instr[0], ":"])
 				if(instr[0]=="main"):
 					func = "main"
+					self.pushActRec(func)
 				elif self.isFunc(instr[0]):
 					func = instr[0]
-				self.pushActRec(func)
+					self.pushActRec(func)
 			
 			elif(instr[0]=="end"):
 				if(instr[1] == "main"):
@@ -302,22 +302,29 @@ class CodeGen:
 			
 			elif(instr[0] == "return"):
 				if instr[1] in self._temps:
-					self.addInstr(self.store(self._temps[instr[1]], str(self._baseOffset) + "($sp)", func))
+					self.addInstr(["sw", self._temps[instr[1]], str(self._baseOffset) + "($sp)"])
+					#self.addInstr(["move", "$v0", self._temps[instr[1]]])
 				else:
 					t = self.getTempReg()
 					self.addInstr(self.load(t, instr[1], func))
-					self.addInstr(self.store(t, str(self._baseOffset) + "($sp)", func))
+					self.addInstr(["sw", t, str(self._baseOffset) + "($sp)"])
+					#self.addInstr(["move", "$v0", t])
+
 			
 			elif(instr[0]=="param"):
 				if instr[1] in self._temps:
 					self.addInstr(["addi", "$sp", "-4"])
-					self.addInstr(self.store(self._temps[instr[1]], "$sp", func))
+					self.addInstr(self.store(self._temps[instr[1]], "0($sp)", func))
+					self.addOffsetLocs(4, func)
+					self._baseOffset += 4
 				else:	
 					t = self.getTempReg()
 					self.addInstr(self.load(t, instr[1], func))
 					self.addInstr(["addi", "$sp", "-4"])
 					self.addInstr(self.store(t, "0($sp)", func))
 					self.resetTempReg(t)
+					self.addOffsetLocs(4, func)
+					self._baseOffset += 4
 			
 			elif(instr[0] == "call"):
 				
@@ -354,14 +361,14 @@ class CodeGen:
 					if instr[0] in self._temps and instr[2] in self.temps:
 						self.addInstr(["move", self._temps[instr[0]], self._temps[instr[2]]])
 					elif instr[0] in self._temps:
-						if(instr[2]==func):
+						if(self.isFunc(instr[2])):
 							self.addInstr(["move", self._temps[instr[0]], "$v0"])
 						else:
 							self.addInstr(self.load(self._temps[instr[0]], instr[2], func))
 					elif instr[2] in self._temps:
 						self.addInstr(self.store(self._temps[instr[2]], instr[0], func))
 					else:
-						if(instr[2]==self._tac[instrNo-1][1]):
+						if(self.isFunc(instr[2])):
 							self.addInstr(self.store("$v0", instr[0], func))
 						else:
 							t = self.getTempReg()
@@ -423,7 +430,7 @@ class CodeGen:
 					lOperand = self._temps[instr[2]]
 					rOperand = self._temps[instr[4]]
 				elif instr[2] in self._temps:
-					if instr[4] == func:
+					if self.isFunc(instr[4]):
 						lOperand = self._temps[instr[2]]
 						rOperand = "$v0"
 					else:
@@ -434,7 +441,7 @@ class CodeGen:
 						self.resetTempReg(t)
 
 				elif instr[4] in self._temps:
-					if instr[2] == func:
+					if self.isFunc(instr[2]):
 						lOperand = "$v0"
 						rOperand = self._temps[instr[4]]
 					else:
@@ -518,20 +525,4 @@ class CodeGen:
 			elif(len(instr)==4):
 				pass
 					
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
