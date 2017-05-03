@@ -17,15 +17,7 @@ contents = f.read()
 f.close()
 
 result = parser.parse(contents)
-data = '    Name        Type        Value \n\n'
-for symbolTable in symbolTables:
-    data += symbolTable._name + ":\n\n"
-    for symbol in symbolTable.table:
-        data += "   " + symbol['Name'] + "      " + str(symbol['Type']) + "      "+ str(symbol['Value'])  + '\n'
-        #data += str(symbol)
-    data += '\n'
-f = open('SymbolTable.csv',"w+")
-f.write(data)
+
 f = open("Ast.text", "w+")
 f.write(str(ast[1]))
 
@@ -49,3 +41,18 @@ f3 = open("mips.s", "w+")
 codeGen.getMipsFile("mips.s")
 #print codeGen.getMethods()
 #print codeGen.getGlobVars()
+
+
+data = '    Name        Type        Value \n\n'
+for symbolTable in symbolTables:
+    data += symbolTable._name + ":\n\n"
+    for symbol in symbolTable.table:
+    	if "Offset" in symbol:
+        	data += "   " + symbol['Name'] + "      " + str(symbol['Type']) + "      "+ str(symbol['Value'])+ "		"  + str(symbol["Offset"]) +'\n'
+        else:
+        	data += "   " + symbol['Name'] + "      " + str(symbol['Type']) + "      "+ str(symbol['Value'])  + '\n'
+
+        #data += str(symbol)
+    data += '\n'
+f = open('SymbolTable.csv',"w+")
+f.write(data)

@@ -5,6 +5,8 @@ class CodeGen:
 		self._symTabs = symTabs
 		self._tac = tac
 		self._temps = {}
+		self._baseOffset = 0
+		self._preOff = 0
 		for i in range(0, len(temps)):
 			self._temps[temps[i]] = "$s" + str(i)
 		self._regs = []
@@ -88,21 +90,39 @@ class CodeGen:
 			if tab.getName() == func:
 				return tab.getVarSize(var)
 
-	def getOffset(self, var, func):
+	def getOffsetLoc(self, var, func):
 		for tab in self._symTabs:
 			if tab.getName() == func:
-				return tab.getOffset(var)
+				return tab.getOffsetLoc(var)
 
-	def addOffset(self, offset, func):
+	def getOffsetParam(self, var, func):
 		for tab in self._symTabs:
 			if tab.getName() == func:
-				tab.addOffset(offset)
+				return tab.getOffsetParam(var)
+
+	def addOffsetLocs(self, offset, func):
+		for tab in self._symTabs:
+			if tab.getName() == func:
+				tab.addOffsetLocs(offset)
 				break
+
+	def addOffsetParams(self, offset, func):
+		for tab in self._symTabs:
+			if tab.getName() == func:
+				tab.addOffsetParams(offset)
+				break
+
+
 
 	def getParams(self, func):
 		for tab in self._symTabs:
 			if tab.getName() == func:
 				return tab.getParams()
+
+	def addOffsetParams(self, offset, func):
+		for tab in self._symTabs:
+			if tab.getName() == func:
+				tab.addOffsetParams(offset)
 
 	def getTempReg(self):
 		for r in self._tempRegs:
@@ -147,14 +167,29 @@ class CodeGen:
 			if tab.getName() == func:
 				return tab.getSpaceForLocs()
 
+	def setInitialOffsetLocs(self, func):
+		for tab in self._symTabs:
+			if tab.getName() == func:
+				tab.setInitialOffsetLocs()
+
+	def setInitialOffsetParams(self, func):
+		for tab in self._symTabs:
+			if tab.getName() == func:
+				tab.setInitialOffsetParams()
+
 
 	def pushActRec(self, func):
+		self.setInitialOffsetLocs(func)
+		self.setInitialOffsetParams(func)
 		space = -(self.getSpaceForLocs(func))
-		if space > 0:
+		self._preOff = self._baseOffset
+		self._baseOffset = -space
+		if space < 0:
 			self.addInstr(["addi", "$sp", str(space)])
 
 	def popActRec(self, func):
 		space = self.getSpaceForLocs(func)
+		self._baseOffset = self._preOff
 		if space > 0:
 			self.addInstr(["addi", "$sp", str(space)])
 
@@ -176,10 +211,10 @@ class CodeGen:
 		if value in self.getGlobVars():
 			return ["lw", reg, value]
 		elif value in self.getLocVars(func):
-			offset = -(self.getOffset(value, func))
+			offset = -(self.getOffsetLoc(value, func))
 			return ["lw", reg, str(offset)+"($sp)"]
 		elif value in self.getParams(func):
-			offset = self.getOffset(value, func)
+			offset = self.getOffsetParam(value, func) + self._baseOffset + 16
 			return ["lw", reg, str(offset)+"($sp)"]
 		else:
 			return ["li", reg, value]
@@ -188,11 +223,17 @@ class CodeGen:
 		if addr in self.getGlobVars():
 			return ["sw", reg, addr]
 		elif addr in self.getLocVars(func):
-			offset = -(self.getOffset(addr, func))
+			offset = -(self.getOffsetLoc(addr, func))
 			return ["sw", reg, str(offset) + "($sp)"]
 		elif addr in self.getParams(func):
-			offset = self.getOffset(addr, func)
+			offset = self.getOffsetParam(addr, func) + self._baseOffset + 16
 			return ["sw", reg, str(offset) + "($sp)"]
+		elif addr in self.getMethods():
+			return ["sw", reg, "$v0"]
+		elif type(addr) is str:
+			return ["sw", reg, addr]
+
+
 
 
 
@@ -208,9 +249,9 @@ class CodeGen:
 		self.addInstr([".text"])
 
 		self.getMainFirst()
+
 		func = ''
 		instrNo = -1
-		funcParReg = {}
 		for instr in self._tac:
 			instrNo += 1
 
@@ -218,34 +259,35 @@ class CodeGen:
 				if(self._tac[instrNo-1][0] == "call"):
 					self.addInstr(["lw", "$v0", "0($sp)"])
 					self.addInstr(["addi", "$sp", "4"])
+					self.addOffsetLocs(-4, func)
+					self._baseOffset -= 4
 
-					argRegs = funcParReg[func]
-					for a in reversed(argRegs):
-						self.addInstr(["lw", a, "0($sp)"])
-						self.addInstr(["addi", "$sp", "4"])
-						self.setArgReg(a)
-
+					
 					self.addInstr(["lw", "$ra", "0($sp)"])					
 					self.addInstr(["addi", "$sp", "4"])
-
+					self.addOffsetLocs(-4, func)
+					self._baseOffset -= 4
+					
 					self.addInstr(["lw", "$s1", "0($sp)"])					
 					self.addInstr(["addi", "$sp", "4"])
+					self.addOffsetLocs(-4, func)
+					self._baseOffset -= 4
 
 					self.addInstr(["lw", "$s0", "0($sp)"])					
 					self.addInstr(["addi", "$sp", "4"])
+					self.addOffsetLocs(-4, func)
+					self._baseOffset -= 4
+
 
 			if(instr[1]==":"):
-				if self.isFunc(instr[0]):
+				self.addInstr([instr[0], ":"])
+				if(instr[0]=="main"):
+					func = "main"
+				elif self.isFunc(instr[0]):
 					func = instr[0]
-					self.addInstr([instr[0], ":"])
-					self.pushActRec(instr[0])
-
-					funcParReg[func] = []
-				else:
-					self.addInstr([instr[0], ":"])
+				self.pushActRec(func)
 			
 			elif(instr[0]=="end"):
-				func = ''
 				if(instr[1] == "main"):
 					self.addInstr(["li", "$v0", "1"])
 					self.addInstr(["lw", "$a0", "0($sp)"])
@@ -256,49 +298,52 @@ class CodeGen:
 				else:
 					self.popActRec(instr[1])
 					self.addInstr(["jr", "$ra"])
+				func = ''
 			
 			elif(instr[0] == "return"):
 				if instr[1] in self._temps:
-					self.addInstr(["move", "$v0", self._temps[instr[1]]])
+					self.addInstr(self.store(self._temps[instr[1]], str(self._baseOffset) + "($sp)", func))
 				else:
-					self.addInstr(self.load("$v0", instr[1], func))
+					t = self.getTempReg()
+					self.addInstr(self.load(t, instr[1], func))
+					self.addInstr(self.store(t, str(self._baseOffset) + "($sp)", func))
 			
 			elif(instr[0]=="param"):
-				reg = self.getArgReg()
 				if instr[1] in self._temps:
-					self.addInstr(["move", reg, self._temps[instr[1]]])
-				else:
-					self.addInstr(self.load(reg, instr[1], func))
-
-				funcParReg[func].append(reg)
+					self.addInstr(["addi", "$sp", "-4"])
+					self.addInstr(self.store(self._temps[instr[1]], "$sp", func))
+				else:	
+					t = self.getTempReg()
+					self.addInstr(self.load(t, instr[1], func))
+					self.addInstr(["addi", "$sp", "-4"])
+					self.addInstr(self.store(t, "0($sp)", func))
+					self.resetTempReg(t)
 			
 			elif(instr[0] == "call"):
 				
+
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$s0", "0($sp)"])
-				
+				self.addOffsetLocs(4, func)
+				self._baseOffset += 4
+
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$s1", "0($sp)"])
+				self.addOffsetLocs(4, func)
+				self._baseOffset += 4
 
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$ra", "0($sp)"])
-
-
-				self.addOffset(12, func)
-
-				argRegs = funcParReg[func]
-				for a in argRegs:
-					self.addInstr(["addi", "$sp", "-4"])
-					self.addInstr(["sw", a, "0($sp)"])
-					self.addOffset(4, func)
-					self.resetArgReg(a)
+				self.addOffsetLocs(4, func)
+				self._baseOffset += 4
 				
 				self.addInstr(["addi", "$sp", "-4"])
 				self.addInstr(["sw", "$v0", "0($sp)"])
-
-				self.addOffset(4, func)
+				self.addOffsetLocs(4, func)
+				self._baseOffset += 4
 
 				self.addInstr(["jal", instr[1]])
+
 
 			elif (instr[0] == "goto"):
 				self.addInstr(['j', instr[1]])
@@ -316,8 +361,8 @@ class CodeGen:
 					elif instr[2] in self._temps:
 						self.addInstr(self.store(self._temps[instr[2]], instr[0], func))
 					else:
-						if(instr[2]==func):
-							self.addInstr(self.store("$v0", instr[0]))
+						if(instr[2]==self._tac[instrNo-1][1]):
+							self.addInstr(self.store("$v0", instr[0], func))
 						else:
 							t = self.getTempReg()
 							self.addInstr(self.load(t, instr[2], func))

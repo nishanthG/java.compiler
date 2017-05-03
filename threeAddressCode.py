@@ -36,7 +36,7 @@ class ThreeAddressCode:
 					if(instr[1]==":"):
 						file.write(a)
 					else:
-						file.write(a + " ")
+						file.write(str(a) + " ")
 				else:
 					file.write(str(a) + " ")
 			file.write("\n")

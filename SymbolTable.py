@@ -27,7 +27,7 @@ class SymbolTable:
 	def getLocVars(self):
 		locVars = []
 		for sym in self.table:
-			if "Params" not in sym:
+			if "Param" not in sym:
 				locVars.append(sym["Name"])
 		return locVars
 
@@ -39,20 +39,22 @@ class SymbolTable:
 
 	def getParams(self):
 		params = {}
-		size = 0
 		for sym in self.table:
-			sym["Offset"] = size
 			if "Param" in sym:
 				params[sym["Name"]] = sym["Type"]
+		return params
+
+	def setInitialOffsetParams(self):
+		size = 0
+		for sym in self.table:
+			if "Param" in sym:
 				sym["Offset"] = size
 				if sym["Type"] == "int":
 					size += 4
 				elif sym["Type"] == "float":
 					size += 8
-		return params
 
-
-	def getSpaceForLocs(self):
+	def setInitialOffsetLocs(self):
 		size = 0
 		for sym in self.table:
 			if "Param" not in sym:
@@ -61,19 +63,38 @@ class SymbolTable:
 					size += 4
 				elif sym["Type"] == "float":
 					size += 8
+
+	def getSpaceForLocs(self):
+		size = 0
+		for sym in self.table:
+			if "Param" not in sym:
+				if sym["Type"] == "int":
+					size += 4
+				elif sym["Type"] == "float":
+					size += 8
 		return size
 
-	def addOffset(self, offset):
+	def addOffsetLocs(self, offset):
 		for sym in self.table:
 			if "Params" not in sym:
 				sym["Offset"] += offset
 
-	def getOffset(self, var):
-		self.getParams()
-		self.getSpaceForLocs()
+	def addOffsetParams(self, offset):
 		for sym in self.table:
-			if sym["Name"] == var:
-				return sym["Offset"]
+			if "Param" in sym:
+				sym["Offset"] += offset
+
+	def getOffsetParam(self, par):
+		for sym in self.table:
+			if "Param" in sym:
+				if sym["Name"] == par:
+					return sym["Offset"]
+
+	def getOffsetLoc(self, var):
+		for sym in self.table:
+			if "Param" not in sym:
+				if sym["Name"] == var:
+					return sym["Offset"]
 
 	def getVarSize(self, var):
 		for sym in self.table:
