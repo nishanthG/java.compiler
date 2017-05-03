@@ -444,7 +444,8 @@ def p_Statement(p):
               | RETURN SEMICOLON
               | RETURN Expression SEMICOLON
               | THROW Expression SEMICOLON
-              | SYNCHRONIZED ParExpression Block '''
+              | SYNCHRONIZED ParExpression Block
+              | SYSTEM DOT OUT DOT PRINT_LN ParExpression SEMICOLON '''
               #| IDENTIFIER COLON Statement
 
   if(p[1] in ['if', 'while']):
@@ -471,6 +472,8 @@ def p_Statement(p):
       p[0] = ReturnStatement(p[2]["Value"])
     else:
       p[0] = ReturnStatement(None) 
+  elif(p[1]=="System"):
+    p[0] = PrintStatement(p[6]['Value'])
   else:
     p[0] = p[1]          
 

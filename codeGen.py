@@ -210,7 +210,7 @@ class CodeGen:
 		if value in self.getGlobVars():
 			return ["lw", reg, value]
 		elif value in self.getLocVars(func):
-			offset = self._baseOffset + self.getOffsetLoc(value, func) + self.getVarSize(value, func)
+			offset = self._baseOffset + self.getOffsetLoc(value, func) - self.getVarSize(value, func)
 			return ["lw", reg, str(offset)+"($sp)"]
 		elif value in self.getParams(func):
 			offset = self._baseOffset + 16 + self.getOffsetParam(value, func)
@@ -222,7 +222,7 @@ class CodeGen:
 		if addr in self.getGlobVars():
 			return ["sw", reg, addr]
 		elif addr in self.getLocVars(func):
-			offset = self._baseOffset + self.getOffsetLoc(addr, func) + self.getVarSize(addr, func)
+			offset = self._baseOffset + self.getOffsetLoc(addr, func) - self.getVarSize(addr, func)
 			return ["sw", reg, str(offset) + "($sp)"]
 		elif addr in self.getParams(func):
 			offset =  self._baseOffset + 16 + self.getOffsetParam(addr, func)
@@ -239,7 +239,7 @@ class CodeGen:
 		globs = self.getGlobVars()
 		for g in globs:
 			size = self.getVarSize(g, "Global")
-			self.addInstr([g, ".space", size])
+			self.addInstr([g + ":", ".space", size])
 
 		self.addInstr([".text"])
 
@@ -285,10 +285,7 @@ class CodeGen:
 			
 			elif(instr[0]=="end"):
 				if(instr[1] == "main"):
-					self.addInstr(["li", "$v0", "1"])
-					self.addInstr(["lw", "$a0", "0($sp)"])
-					self.addInstr(["syscall"])
-
+					
 					self.addInstr(["li", "$v0", 10])
 					self.addInstr(["syscall"])
 				else:
@@ -460,7 +457,7 @@ class CodeGen:
 						lOperand = t1
 						rOperand = "$v0"
 						self.resetTempReg(t1)
-						
+
 					else:
 						t1 = self.getTempReg()
 						t2 = self.getTempReg()
@@ -498,7 +495,24 @@ class CodeGen:
 					else:
 						self.addInstr(self.store(lOperand, instr[0]))
 
-			elif(len(instr)==4):
-				pass
-					
+			elif(instr[0]=="print"):
+
+				if instr[1] in self._temps:
+					self.addInstr(["li", "$v0", "1"])
+					self.addInstr(["move" "$a0", self._temps[instr[1]]])
+					self.addInstr(["syscall"])
+				else:
+					self.addInstr(["li", "$v0", "1"])
+					self.addInstr(self.load("$a0", instr[1], func))
+					self.addInstr(["syscall"])
+
+				'''
+					elif instr == "\n":
+					self.addInstr(["li", "$v0", "1"])
+					self.addInstr(["lw", "$a0", '"' + "newl" + '"'])
+					self.addInstr(["syscall"])
+				'''
+				
+
+	
 
