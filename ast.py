@@ -178,6 +178,13 @@ class ColonStatement:
 	def __init__(self):
 		return self._identifier + " : " + str(self._statement)
 
+class PrintStatement:
+	def __init__(self, expression):
+		self._expression =  expression
+
+	def genTac(self):
+		tac.addInstr(["print", str(self._expression.genTac())])
+
 class IfStatement:
 	def __init__(self, expression, statement):
 		self._expression = expression
