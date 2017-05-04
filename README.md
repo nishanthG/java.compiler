@@ -27,10 +27,14 @@ This README would normally document whatever steps are necessary to get your app
 
 **symbolTable.py** : implementation of symbol table using 'lists' data-structure. It has 3 methods insert(), lookup() and lookupCurrentScope(). lookup() searches for the symbol in the current scope if found, returns it else looks in the scope of the parent's scope, whereas lookupcurrent scope searches the symbol in the current scope itself.
 
+**ast.py** : implemented a abstarct syntax tree.
+
+**CodeGen.py** : code for code generation.
+
 ### How do I get set up? ###
 
 * initially, cd to folder where the files are.
-* python semanticAnalysis.py 'file_name'
+* python semanticTest.py 'file_name'
 * Symbol table details in symbolTable.text
 * 3 addr code in tac.text files.
 
