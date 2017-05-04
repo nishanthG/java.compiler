@@ -32,6 +32,7 @@ This README would normally document whatever steps are necessary to get your app
 * initially, cd to folder where the files are.
 * python semanticAnalysis.py 'file_name'
 * Symbol table details in symbolTable.text
+* 3 addr code in tac.text files.
 
 ### Contribution  ###
 
