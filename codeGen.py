@@ -438,7 +438,17 @@ class CodeGen:
 
 				else:
 					if self.isFunc(instr[2]) and self.isFunc(instr[4]):
-						pass
+						
+						t1 = self.getTempReg()
+						t2 = self.getTempReg()
+						self.addInstr(["move", t1, "$v0"])
+						self.addInstr(["move", t2, "$v0"])
+
+						lOperand = t1
+						rOperand = t2
+
+						self.resetTempReg(t1)
+						self.resetTempReg(t2)
 
 					elif self.isFunc(instr[2]):
 						t1 = self.getTempReg()
@@ -515,4 +525,3 @@ class CodeGen:
 				
 
 	
-
